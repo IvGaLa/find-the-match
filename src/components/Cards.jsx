@@ -1,5 +1,6 @@
 import cards from 'data/data.json'
 import { useEffect, useState } from 'react';
+import Dificultad from './Dificultad';
 
 
 function Cards() {
@@ -9,9 +10,9 @@ function Cards() {
     ocultar: 'opacity-100'
   }
 
-  const segundosDeEspera = 1000 * 3 // Segundos que se espera cuando se falla hasta que oculta de nuevo las cartas
+  const [segundosDeEspera, setSegundosDeEspera] = useState(1000 * 3) // Segundos que se espera cuando se falla hasta que oculta de nuevo las cartas
 
-  const [cartasTotales, setcartasTotales] = useState(10) // Cuantas cartas (diferentes) se mostrarán
+  const [cartasTotales, setCartasTotales] = useState(10) // Cuantas cartas (diferentes) se mostrarán
 
   const imgDir = '/images/cards/'
 
@@ -21,12 +22,17 @@ function Cards() {
 
   const [anterior, setAnterior] = useState(null)
 
+  const [seedId, setSeedId] = useState()
+
   useEffect(() => {
     // Desordenamos el array dos veces y recuperamos solo los primeros 10 elementos
     const c = shuffle(shuffle(cards)).slice(0, cartasTotales)
 
     // Llenamos por dupliucador el array final con el array anterior y lo desordenamos para barajar las cartas finales.
     setCardShuffle(shuffle([...c, ...c]))
+
+    // Creamos un número aleatorio para los id's del map.
+    setSeedId(Math.random())
   },[cartasTotales])
   
 
@@ -86,13 +92,12 @@ function Cards() {
 
   return (
     <>
-    <label htmlFor='cartasTotales'>Cartas totales: </label>
-    <input name='cartasTotales' type='text' onChange={(e) => setcartasTotales(e.target.value)} value={cartasTotales} />
+    <Dificultad setCartasTotales={setCartasTotales} setSegundosDeEspera={setSegundosDeEspera} />
     <div className='grid grid-cols-5 gap-y-2 place-items-center'>
       {
         (cardsShuffle) &&
           cardsShuffle.map((card, index) => (
-            <div key={index} className='relative h-[135px] w-[135px] bg-orange-200 border rounded-full'>
+            <div key={`${seedId}-${index}`} className='relative h-[135px] w-[135px] bg-orange-200 border rounded-full'>
               <img className='absolute top-0 left-0 h-full w-full object-cover rounded-full' src={`${imgDir}${card}`} alt="." />
               <img onClick={(e) => handlerClick({e, card})} className={`${typesOpacity.ocultar} absolute top-0 left-0 h-full w-full object-cover rounded-full`} src={`${imgDir}back.png`} alt="." />
             </div>
