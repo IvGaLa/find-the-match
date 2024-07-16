@@ -1,6 +1,8 @@
 import cards from 'data/data.json'
 import { useEffect, useState } from 'react';
 import Dificultad from './Dificultad';
+import Vidas from './Vidas'
+import Gameover from './Gameover';
 
 
 function Cards() {
@@ -10,58 +12,78 @@ function Cards() {
     ocultar: 'opacity-100'
   }
 
+  const imgDir = '/images/cards/' // Directorio de las imagenes
+
   const [segundosDeEspera, setSegundosDeEspera] = useState(1000 * 3) // Segundos que se espera cuando se falla hasta que oculta de nuevo las cartas
 
-  const [cartasTotales, setCartasTotales] = useState(10) // Cuantas cartas (diferentes) se mostrarán
+  const [cartasTotales, setCartasTotales] = useState(0) // Cuantas cartas (diferentes) se mostrarán
 
-  const imgDir = '/images/cards/'
+  const [cardsShuffle, setCardsShuffle] = useState() // Guarda las cartas del juego barajadas
 
-  const [cardsShuffle, setCardShuffle] = useState()
+  const [mostrar, setMostrar] = useState(true) // Lo uso para evitar que se puedan mostrar mas de dos cartas a la vez
 
-  const [mostrar, setMostrar] = useState(true) // Lo uso para evitar que se puedan mostrar ma de dos cartas a la vez
+  const [anterior, setAnterior] = useState(null) // Guardo la primera carta clickeada
 
-  const [anterior, setAnterior] = useState(null)
+  const [seedId, setSeedId] = useState() // Lo uso para poner un key diferente a cada card
 
-  const [seedId, setSeedId] = useState()
+  const [vidas, setVidas] = useState(5) // Número de vidas del jugador
 
-  useEffect(() => {
+  const [gameover, setGameover] = useState(false)
+
+  const iniciamosJuego = () => {
     // Desordenamos el array dos veces y recuperamos solo los primeros 10 elementos
     const c = shuffle(shuffle(cards)).slice(0, cartasTotales)
 
     // Llenamos por dupliucador el array final con el array anterior y lo desordenamos para barajar las cartas finales.
-    setCardShuffle(shuffle([...c, ...c]))
+    setCardsShuffle(shuffle([...c, ...c]))
 
     // Creamos un número aleatorio para los id's del map.
     setSeedId(Math.random())
-  },[cartasTotales])
-  
+
+    //setVidas(vidasIniciales)
+  }
+
+  useEffect(() => {
+    iniciamosJuego()
+  }, [cartasTotales])
+
+  useEffect(() => {
+    if (vidas === 0) {
+      setGameover(true)
+      setTimeout(() => {
+        setGameover(false)
+        //iniciamosJuego()
+      }, 1000 * 5)
+    }
+  }, [vidas])
 
   const handlerClick = (data) => {
-    if(mostrar){
-      const {e, card} = data
-      
+    if (mostrar) {
+      const { e, card } = data
+
       // Mostramos la carta que hemos hecho click
-      toggleClass({"e": e, "remove": typesOpacity.ocultar, "add": typesOpacity.mostrar})
-  
-      if(anterior === null) { // Si es la primera carta clickeada, la asignamos a la "anterior"
+      toggleClass({ "e": e, "remove": typesOpacity.ocultar, "add": typesOpacity.mostrar })
+
+      if (anterior === null) { // Si es la primera carta clickeada, la asignamos a la "anterior"
         setAnterior(data)
-      }else{ // Si es la segunda carta que hemos clickeado
+      } else { // Si es la segunda carta que hemos clickeado
         // Impedimos que se puedan mostrar mas cartas, para que no se puedan ver otras cartas miestras se muestra que se ha fallado
         setMostrar(false)
-        const {"e": eAnterior, "card": cardAnterior} = anterior
+        const { "e": eAnterior, "card": cardAnterior } = anterior
 
         // Si la cartaAnterior y la carta actual son diferentes (Hemos fallado)
-        if(card !== cardAnterior){
+        if (card !== cardAnterior) {
 
           // Hacemos un timeout para que se muestren las cartas que se han seleccionado pero son diferentes
           setTimeout(() => {
-            toggleClass({"e":e, "remove": typesOpacity.mostrar, "add": typesOpacity.ocultar})
-            toggleClass({"e": eAnterior, "remove": typesOpacity.mostrar, "add": typesOpacity.ocultar})
+            toggleClass({ "e": e, "remove": typesOpacity.mostrar, "add": typesOpacity.ocultar })
+            toggleClass({ "e": eAnterior, "remove": typesOpacity.mostrar, "add": typesOpacity.ocultar })
 
             // Permitimos que se vuelvan a poder mostrar las cartas
             setMostrar(true)
           }, segundosDeEspera)
-        }else{ // Si hemos acertado la pareja
+          setVidas(vidas - 1)
+        } else { // Si hemos acertado la pareja
 
           // Permitimos el seguir jugando
           setMostrar(true)
@@ -92,18 +114,23 @@ function Cards() {
 
   return (
     <>
-    <Dificultad setCartasTotales={setCartasTotales} setSegundosDeEspera={setSegundosDeEspera} />
-    <div className='grid grid-cols-5 gap-y-2 place-items-center'>
-      {
-        (cardsShuffle) &&
+      <div className='grid grid-cols-3'>
+        <Dificultad setCartasTotales={setCartasTotales} setSegundosDeEspera={setSegundosDeEspera} setVidas={setVidas} />
+        {(gameover === true) && <Gameover />}
+        <Vidas vidas={vidas} />
+      </div>
+
+      <div className='grid grid-cols-5 gap-y-2 place-items-center'>
+        {
+          (cardsShuffle) &&
           cardsShuffle.map((card, index) => (
             <div key={`${seedId}-${index}`} className='relative h-[135px] w-[135px] bg-orange-200 border rounded-full'>
               <img className='absolute top-0 left-0 h-full w-full object-cover rounded-full' src={`${imgDir}${card}`} alt="." />
-              <img onClick={(e) => handlerClick({e, card})} className={`${typesOpacity.ocultar} absolute top-0 left-0 h-full w-full object-cover rounded-full`} src={`${imgDir}back.png`} alt="." />
+              <img onClick={(e) => handlerClick({ e, card })} className={`${typesOpacity.ocultar} absolute top-0 left-0 h-full w-full object-cover rounded-full`} src={`${imgDir}back.png`} alt="." />
             </div>
           ))
-      }
-    </div>
+        }
+      </div>
     </>
   )
 }
